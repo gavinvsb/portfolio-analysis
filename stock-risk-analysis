@@ -1,0 +1,54 @@
+import pandas as pd
+import numpy as np
+from scipy.stats import skew
+from scipy.stats import kurtosis
+from scipy.stats import shapiro
+import yfinance as yf
+import matplotlib.pyplot as plt
+from matplotlib import pyplot
+%matplotlib inline
+
+ticker= "aapl"
+stock_data = yf.download(ticker, start="2016-01-04", end="2021-05-16")
+
+stock_data
+
+stock_data['Returns'] = stock_data['Adj Close'].pct_change()
+stock_data['Returns'].plot()
+plt.show()
+
+returns_percent = stock_data['Returns'] * 100
+returns_percent.dropna(inplace=True)
+
+plt.hist(returns_percent, bins=75)
+plt.xlabel("Percentage of Returns")
+plt.show()
+
+
+daily_mean_returns = np.mean(stock_data['Returns'])
+print("Daily Mean Returns: " + str(daily_mean_returns))
+
+annual_mean_returns = ((1+ daily_mean_returns)**252)-1
+print("Annual Mean Returns: " + str(annual_mean_returns))
+
+daily_std = np.std(stock_data['Returns'])
+annual_std = daily_std*np.sqrt(252)
+print("Daily Standard Deviation " + str(daily_std))
+print("Annual Standard Deviation " + str(annual_std ))
+
+print('\n')
+
+daily_var= daily_std**2
+annual_var = annual_std**2
+print("Daily Variance " + str(daily_var))
+print("Annual Variance " + str(annual_var))
+
+returns = stock_data['Returns'].dropna()
+skewness = skew(returns)
+print("Skewness: " + str(skewness))
+
+excess_kurtosis = kurtosis(returns)
+print("Excess kurtosis: " + str(excess_kurtosis))
+
+real_kurtosis = excess_kurtosis + 3
+print("Real kurtosis: " + str(real_kurtosis))
