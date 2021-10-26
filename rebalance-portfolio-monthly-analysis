@@ -1,0 +1,71 @@
+import numpy as np
+import pandas as pd
+import yfinance as yf
+import matplotlib.pyplot as plt
+
+
+# Define portfolio
+tickers = ["AAPL", "ABMD", "ACN", "ADBE", "AEE", "AMZN", "COG", "CPB", "CVX",
+           "DLR", "DLTR", "DPZ", "EA", "EBAY", "FB", "FDX", "FOX", "GE", "GOOGL",  
+           "HPE", "HD", "HON", "IEX", "INTC", "JNJ", "JPM", "KMB", "LRCX", 
+           "MAR", "MA", "MSFT", "MSI",  "NFLX", "NKE", "NLSN", "ORCL", "PYPL", 
+           "PFE",  "QCOM", "REG", "SBUX", "TSLA", "TWTR", "UAL", "VZ",  "WFC", 
+           "WDC", "XEL", "YUM", "ZION"]
+
+
+# Download portfolio data
+stock_data = yf.download(tickers,start='2019-04-1', end='2021-10-1',interval='1mo')
+stock_data = stock_data.dropna()     
+
+
+# Download Baseline S&P 500 data
+sp500 = yf.download("^GSPC",start='2019-4-1', end='2021-10-1',interval='1mo')
+
+
+# Instantiate stock returns data
+stock_returns = pd.DataFrame()
+
+
+# For each stock in the portfolio, fill stock_returns with monthly percentage change
+for ticker in tickers:
+    stock_returns[ticker] = stock_data['Adj Close'][ticker].pct_change()
+
+stock_returns = stock_returns.dropna()
+
+
+# Fill sp500 with monthly percentage change
+sp500["monthly_returns"] = sp500["Adj Close"].pct_change().fillna(0)
+
+
+# Rebalance portfolio by removing bad performing stocks
+def portfolio(data, numStocks, numRev):
+    df = data.copy()
+    selected_stocks = []
+    avg_monthly_ret = [0]
+    for i in range(len(df)):
+        if len(selected_stocks ) > 0:
+            avg_monthly_ret.append(df[selected_stocks].iloc[i,:].mean())
+            bad_stocks = df[selected_stocks].iloc[i,:].sort_values(ascending=True)[:numRev].index.values.tolist()
+            selected_stocks  = [t for t in selected_stocks if t not in bad_stocks]
+        fill = numStocks - len(selected_stocks)
+        new_picks = df.iloc[i,:].sort_values(ascending=False)[:fill].index.values.tolist()
+        selected_stocks  = selected_stocks  + new_picks
+        print(selected_stocks)
+    returns_df = pd.DataFrame(np.array(avg_monthly_ret),columns=["monthly_returns"])
+    return returns_df 
+
+
+def CAGR(data):
+    df = data.copy()
+    df['cumulative_returns'] = (1 + df['monthly_returns']).cumprod()
+    trading_months = 12
+    n = len(df) / trading_months
+    cagr = (df['cumulative_returns'][len(df)-1])**(1/n) - 1
+    return cagr
+
+
+def volatility(data):
+    df = data.copy()
+    trading_months = 12
+    vol = df['monthly_returns'].std() * np.sqrt(trading_months)
+    return vol
