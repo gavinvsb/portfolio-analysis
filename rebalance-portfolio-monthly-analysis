@@ -69,3 +69,68 @@ def volatility(data):
     trading_months = 12
     vol = df['monthly_returns'].std() * np.sqrt(trading_months)
     return vol
+
+
+def sharpe_ratio(data, rf):
+    df = data.copy()
+    sharpe = (CAGR(df) - rf) / volatility(df)
+    return sharpe 
+
+
+def sortino_ratio(data, rf):
+    df = data.copy()
+    df["negative_returns"] = np.where(df["monthly_returns"] < 0, df["monthly_returns"], 0)
+    negative_volatility = df['negative_returns'].std() * np.sqrt(252)
+    sortino = (CAGR(df) - rf) / negative_volatility 
+    return sortino
+
+
+def sortino_ratio_sp500(data, rf):
+    df = data.copy()
+    df['monthly_returns'] = df['Adj Close'].pct_change()
+    df["negative_returns"] = np.where(df["monthly_returns"] < 0, df["monthly_returns"], 0)
+    negative_volatility = df['negative_returns'].std() * np.sqrt(252)
+    sortino = (CAGR(df) - rf) / negative_volatility 
+    return sortino
+
+
+def maximum_drawdown(data):
+    df = data.copy()
+    df['cumulative_returns'] =  (1 + df['monthly_returns']).cumprod()
+    df['cumulative_max'] = df['cumulative_returns'].cummax()
+    df['drawdown'] = df['cumulative_max'] - df['cumulative_returns']
+    df['drawdown_pct'] = df['drawdown'] / df['cumulative_max']
+    max_dd = df['drawdown_pct'].max()
+    return max_dd
+
+
+def calmar_ratio(data, rf):
+    df = data.copy()
+    calmar = (CAGR(df) - rf) / maximum_drawdown(data)
+    return calmar
+
+
+rebalanced_portfolio = portfolio(stock_returns, 5, 2)
+print("Rebalanced Portfolio Performance")
+print("CAGR: " + str(CAGR(rebalanced_portfolio)))
+print("Sharpe Ratio: " + str(sharpe_ratio(rebalanced_portfolio, 0.03)))
+print("Sortino Ratio: " + str(sortino_ratio(rebalanced_portfolio, 0.03)))
+print("Maximum Drawdown: " + str(maximum_drawdown(rebalanced_portfolio) ))
+print("Calmar Ratio: " + str(calmar_ratio(rebalanced_portfolio, 0.03)))
+
+print("\n")
+
+print("S&P500 Index Performance")
+print("CAGR: " + str(CAGR(sp500)))
+print("Sharpe Ratio: " + str(sharpe_ratio(sp500, 0.03)))
+print("Sortino Ratio: " + str(sortino_ratio_sp500(sp500, 0.03)))
+print("Maximum Drawdown: " + str(maximum_drawdown(sp500) ))
+print("Calmar Ratio: " + str(calmar_ratio(sp500, 0.03)))
+
+fig, ax = plt.subplots()
+plt.plot((1+portfolio(stock_returns, 5, 2)).cumprod())
+plt.plot((1+sp500["monthly_returns"].reset_index(drop=True)).cumprod())
+plt.title("S&P500 Index Return vs Rebalancing Strategy Return")
+plt.ylabel("cumulative return")
+plt.xlabel("months")
+ax.legend(["Strategy Return","Index Return"])
